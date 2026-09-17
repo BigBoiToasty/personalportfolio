@@ -1,0 +1,242 @@
+@import "tailwindcss";
+
+@theme {
+  --animate-pane-in: pane-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-pane-out: pane-out 180ms ease-in forwards;
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: "Manrope", var(--font-sans);
+  --animate-ripple: ripple 1.2s ease-out forwards;
+  --animate-catch-pop: catch-pop 550ms ease-out forwards;
+
+  /* GMK CYL Mizu R2 — sampled from the pixels of
+     reference/GMK_CYL_Mizu-R2_Keycaps.webp (canvas getImageData, 12px box
+     means on blank cap tops; legends via 10th/90th-percentile luminance):
+       alpha caps    #bdd8e8 #bcd7e7 #b7d2e3  → #bbd5e6  panels, dock
+       modifier caps #222b3c #252c3a          → #242b3b  title bars
+       case          #5c768f #65819e          → #5f7893  page / home water
+       accent cap    #dad9d9 (numpad Enter)   → #dcdbda  sparing accents
+       dark legend   #2f4152 #294157          → #2c4155  primary text
+     The UI mirrors the board: case → page, alphas → panels, mods → headers.
+     The deskmat is only the reference for how the koi are drawn. */
+  --color-mizu-abyss: #5f7893; /* page "desk" — the case, flat */
+  --color-mizu-surface: #bbd5e6; /* panel / dock — alpha cap */
+  --color-mizu-cap: #242b3b; /* modifier cap — title bars */
+  --color-mizu-legend: #dbe4ee; /* light legend — text on the navy title bars */
+  --color-mizu-accent: #dcdbda; /* white accent cap — used sparingly */
+  --color-mizu-foam: #2c4155; /* primary text — dark legend */
+  --color-mizu-deep: #4a5a70; /* muted text (≥4.5:1 on the alpha cap) */
+  --color-mizu-bright: #2f5b8f; /* accent headings */
+  --color-mizu-dim: #9ab6cb; /* borders, dividers — alpha darkened */
+  --color-mizu-ripple: #ffffff; /* ripple stroke — white like the white koi on the home water; panels re-scope it to the rare koi navy */
+  /* koi: white body with a blue outline + head spot (the deskmat drawing); the
+     rare one is its line-art twin with a navy body. Never re-scoped — a fish
+     looks identical on the desk and in a panel. */
+  --color-koi-light: #6e90b0;
+  --color-koi-deep: #242b3b;
+
+  --animate-koi-rear: koi-rear var(--beat, 0.8s) ease-in-out infinite;
+  --animate-koi-tail: koi-tail var(--beat, 0.8s) ease-in-out infinite;
+  --animate-koi-fin: koi-fin var(--beat, 0.8s) ease-in-out infinite;
+  --animate-count-pop: count-pop 400ms ease-out;
+}
+
+/* Inside a panel the ripples are navy like the rare koi (white on the home water). */
+.pane-water {
+  --color-mizu-ripple: #242b3b;
+  --animate-koi-coil: koi-coil 240ms ease-in-out infinite;
+  --animate-koi-land: koi-land 180ms ease-out both;
+}
+
+/* koi swim cycle: the rear body sways, the tail (nested inside it) lags a
+   quarter beat, pectorals flutter. --beat is set per fish by the sim.
+   --arch (degrees) bends the whole back half — used mid-leap. */
+.koi-arch {
+  transform-box: view-box;
+  transform-origin: 24px 12px;
+  transform: rotate(var(--arch, 0deg));
+}
+/* bracing before a hop: a quick lengthwise squash-and-release pulse */
+.koi-coil {
+  animation: var(--animate-koi-coil);
+}
+.koi-rear {
+  transform-box: view-box;
+  transform-origin: 24px 12px;
+  animation: var(--animate-koi-rear);
+}
+.koi-tail {
+  transform-box: view-box;
+  transform-origin: 13px 12px;
+  animation: var(--animate-koi-tail);
+  animation-delay: calc(var(--beat, 0.8s) * -0.25);
+}
+.koi-fin {
+  transform-box: view-box;
+  animation: var(--animate-koi-fin);
+}
+.koi-fin-top {
+  transform-origin: 31px 6px;
+}
+.koi-fin-bottom {
+  transform-origin: 31px 18px;
+  animation-direction: reverse;
+}
+
+@keyframes koi-rear {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+@keyframes koi-tail {
+  0%,
+  100% {
+    transform: rotate(-16deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+@keyframes koi-fin {
+  0%,
+  100% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(8deg);
+  }
+}
+
+/* landing squash-and-stretch on the sprite */
+@keyframes koi-land {
+  0% {
+    transform: scale(1.12, 0.9);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+.koi-land {
+  animation: var(--animate-koi-land);
+}
+
+@keyframes koi-coil {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.92);
+  }
+}
+
+@keyframes count-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pane-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+
+@keyframes ripple {
+  from {
+    width: 0;
+    height: 0;
+    opacity: 0.85;
+  }
+  to {
+    width: 480px;
+    height: 480px;
+    opacity: 0;
+  }
+}
+
+/* caught-fish feedback: pops in place rather than just vanishing */
+@keyframes catch-pop {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.5) translateY(-6px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.3) translateY(-18px);
+    opacity: 0;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-mizu-abyss);
+  color: var(--color-mizu-foam);
+  font-family: var(--font-sans);
+  color-scheme: light;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* themed scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-mizu-dim) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-mizu-dim);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-mizu-deep);
+  background-clip: content-box;
+}

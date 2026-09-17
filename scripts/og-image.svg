@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- link-preview card: case-blue ground, navy legend text, one white koi.
+       Regenerate with resvg-js-cli (fit width 1200) from scripts/og-image.svg to public/og-image.png -->
+  <rect width="1200" height="630" fill="#5f7893"/>
+  <!-- faint ripple rings, like the deskmat -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="3">
+    <circle cx="980" cy="380" r="110"/>
+    <circle cx="980" cy="380" r="190"/>
+    <circle cx="980" cy="380" r="270"/>
+  </g>
+  <!-- koi: the FishIcon drawing (44x24 box) scaled 7x, facing up-right -->
+  <g transform="translate(980 380) rotate(-35) scale(7) translate(-22 -12)" stroke-width="0.9" stroke-linejoin="round" stroke-linecap="round" stroke="#6e90b0">
+    <path fill="#ffffff" d="M13 12C9 9 6 8 3 6.5C5 9 5.5 10.8 5 12C5.5 13.2 5 15 3 17.5C6 16 9 15 13 12Z"/>
+    <path fill="#ffffff" d="M25 5.6C20 6 15.5 9 12 12C15.5 15 20 18 25 18.4Z"/>
+    <path fill="#ffffff" d="M17 12C19 11.4 21.5 11.4 24 12C21.5 12.6 19 12.6 17 12Z"/>
+    <path fill="#ffffff" d="M42.5 12C42.5 8.6 37.5 5.5 30.5 5.5C27.5 5.5 24.8 5.7 22 6.2L22 17.8C24.8 18.3 27.5 18.5 30.5 18.5C37.5 18.5 42.5 15.4 42.5 12Z"/>
+    <circle cx="35" cy="12" r="2.6" fill="#6e90b0" stroke="none"/>
+    <path fill="#ffffff" d="M31 6C30 3.5 27 2.2 25.5 3C27.5 4 29 5.2 31 6Z"/>
+    <path fill="#ffffff" d="M31 18C30 20.5 27 21.8 25.5 21C27.5 20 29 18.8 31 18Z"/>
+    <path fill="none" stroke-width="0.7" d="M42 10.5C43.5 9.5 44 8.5 43.5 7.5M42 13.5C43.5 14.5 44 15.5 43.5 16.5"/>
+    <circle cx="39.5" cy="9.8" r="0.8" fill="#6e90b0" stroke="none"/>
+    <circle cx="39.5" cy="14.2" r="0.8" fill="#6e90b0" stroke="none"/>
+  </g>
+  <g font-family="Manrope, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#242b3b">
+    <text x="90" y="300" font-size="104" font-weight="700" letter-spacing="-3">Christopher Le</text>
+    <text x="92" y="362" font-size="34" font-weight="500" fill="#242b3b" fill-opacity="0.85">CS @ Santa Clara</text>
+    <text x="92" y="410" font-size="34" font-weight="500" fill="#242b3b" fill-opacity="0.85">Building full-stack apps and the servers they run on</text>
+  </g>
+</svg>
