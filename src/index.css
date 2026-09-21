@@ -37,9 +37,6 @@
   --color-koi-light: #6e90b0;
   --color-koi-deep: #242b3b;
 
-  --animate-koi-rear: koi-rear var(--beat, 0.8s) ease-in-out infinite;
-  --animate-koi-tail: koi-tail var(--beat, 0.8s) ease-in-out infinite;
-  --animate-koi-fin: koi-fin var(--beat, 0.8s) ease-in-out infinite;
   --animate-count-pop: count-pop 400ms ease-out;
 }
 
@@ -50,8 +47,9 @@
   --animate-koi-land: koi-land 180ms ease-out both;
 }
 
-/* koi swim cycle: the rear body sways, the tail (nested inside it) lags a
-   quarter beat, pectorals flutter. --beat is set per fish by the sim.
+/* koi swim cycle is procedural: the sim writes --rear / --tail / --fin
+   (degrees) every frame from a damped sine driven by the fish's speed —
+   the tail (nested inside the rear) lags a quarter cycle, pectorals flutter.
    --arch (degrees) bends the whole back half — used mid-leap. */
 .koi-arch {
   transform-box: view-box;
@@ -65,52 +63,23 @@
 .koi-rear {
   transform-box: view-box;
   transform-origin: 24px 12px;
-  animation: var(--animate-koi-rear);
+  transform: rotate(var(--rear, 0deg));
 }
 .koi-tail {
   transform-box: view-box;
   transform-origin: 13px 12px;
-  animation: var(--animate-koi-tail);
-  animation-delay: calc(var(--beat, 0.8s) * -0.25);
+  transform: rotate(var(--tail, 0deg));
 }
 .koi-fin {
   transform-box: view-box;
-  animation: var(--animate-koi-fin);
 }
 .koi-fin-top {
   transform-origin: 31px 6px;
+  transform: rotate(var(--fin, 0deg));
 }
 .koi-fin-bottom {
   transform-origin: 31px 18px;
-  animation-direction: reverse;
-}
-
-@keyframes koi-rear {
-  0%,
-  100% {
-    transform: rotate(-6deg);
-  }
-  50% {
-    transform: rotate(6deg);
-  }
-}
-@keyframes koi-tail {
-  0%,
-  100% {
-    transform: rotate(-16deg);
-  }
-  50% {
-    transform: rotate(16deg);
-  }
-}
-@keyframes koi-fin {
-  0%,
-  100% {
-    transform: rotate(-8deg);
-  }
-  50% {
-    transform: rotate(8deg);
-  }
+  transform: rotate(calc(var(--fin, 0deg) * -1));
 }
 
 /* landing squash-and-stretch on the sprite */

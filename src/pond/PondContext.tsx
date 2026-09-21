@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from "react";
 import type { Activity, FishSim, Pond, PondId, Ripple } from "./types";
 import { buildWalls, distAt, gradAt, measureTextRects, nearestFree, selfCheck, textDistAt, type Walls } from "./walls";
+import { flock, fromAngle } from "./vec";
 
 if (import.meta.env.DEV) selfCheck();
 
@@ -109,7 +110,7 @@ const FLIGHT_PEAK_MIN = 18;
 const FLIGHT_PEAK_MAX = 26;
 const FLIGHT_PITCH_DEG = 10;
 const FLIGHT_ARCH_DEG = 10;
-const FLIGHT_LIFT_SCALE = 0.1;
+const FLIGHT_LIFT_SCALE = 0.3; // 1.0 → 1.3 → 1.0 over the arc
 const DIVE_START = 0.88; // fraction of the flight where it starts going under
 const DIVE_OPACITY = 0.55;
 const DIVE_SCALE = 0.9;
@@ -124,10 +125,27 @@ const START_SPREAD_MS = 3000;
 const RESTART_MIN_MS = 200;
 const RESTART_SPREAD_MS = 600;
 
-// tail-beat periods, written to --beat only when the bucket changes
-const BEAT_IDLE = "1.4s";
-const BEAT_CRUISE = "0.8s";
-const BEAT_FAST = "0.35s";
+// procedural tail: θ = sin(phase) · A, phase advancing at a speed-driven
+// rate, amplitude damped toward rest when slow
+const TAIL_BASE_HZ = 0.7; // beats/s when hovering
+const TAIL_HZ_PER_PX = 1 / 110; // extra beats/s per px/s of speed
+const TAIL_FAST_HZ = 1.2; // bonus while fleeing / charging
+const REAR_MAX_DEG = 6;
+const TAIL_MAX_DEG = 16;
+const FIN_MAX_DEG = 8;
+
+// boids (per pond): separation inside SEP_RADIUS, alignment + cohesion within sight
+const SEP_RADIUS = 30;
+const SIGHT_RADIUS = 100;
+const FLOCK_SEP = 3;
+const FLOCK_ALIGN = 0.8;
+const FLOCK_COHERE = 0.6;
+const FLOCK_MAX_FORCE = 2.5;
+
+// a fast cursor sweep is a threat: big ripple + an immediate velocity surge away
+const CURSOR_FLEE_SPEED = 1500; // px/s
+const CURSOR_FLEE_COOLDOWN_MS = 400;
+const FLEE_SURGE = 2.5; // × base speed, instantly
 
 function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
@@ -171,12 +189,20 @@ function writeTransform(f: FishSim, now = 0) {
     }
   }
 }
+/** Procedural tail kinematics: advance the beat phase at a rate set by the
+ * fish's linear speed, then write damped-sine rotations for the rear body,
+ * the tail (a quarter cycle behind) and the pectorals. */
+let simDt = 0; // seconds — set once per tick, read by writeBeat
 function writeBeat(f: FishSim, fast: boolean) {
-  const beat = fast || f.speed > f.baseSpeed * 1.3 ? BEAT_FAST : f.speed < f.baseSpeed * 0.5 ? BEAT_IDLE : BEAT_CRUISE;
-  if (beat !== f.beat) {
-    f.beat = beat;
-    f.el?.style.setProperty("--beat", beat);
-  }
+  const hz = TAIL_BASE_HZ + f.speed * TAIL_HZ_PER_PX + (fast ? TAIL_FAST_HZ : 0);
+  f.phase = (f.phase + hz * Math.PI * 2 * simDt) % (Math.PI * 2);
+  const amp = clamp(0.35 + f.speed / (f.baseSpeed * 1.6), 0.35, 1); // damped when slow
+  const s = Math.sin(f.phase), sLag = Math.sin(f.phase - Math.PI / 2);
+  const st = f.el?.style;
+  if (!st) return;
+  st.setProperty("--rear", `${(s * REAR_MAX_DEG * amp).toFixed(2)}deg`);
+  st.setProperty("--tail", `${(sLag * TAIL_MAX_DEG * amp).toFixed(2)}deg`);
+  st.setProperty("--fin", `${(s * FIN_MAX_DEG * amp).toFixed(2)}deg`);
 }
 function setCoil(f: FishSim, on: boolean) {
   sprite(f)?.classList.toggle("koi-coil", on);
@@ -195,7 +221,7 @@ function makeFishSim(id: number): FishSim {
     wander: 0,
     speed: baseSpeed,
     baseSpeed,
-    beat: BEAT_CRUISE,
+    phase: Math.random() * Math.PI * 2,
     rare: Math.random() < RARE_CHANCE,
     catching: false,
     activity: "wander",
@@ -373,7 +399,7 @@ export function PondProvider({ children }: { children: ReactNode }) {
   const nextIdRef = useRef(0);
   // one cursor across all ponds: last move time, last wake ripple (viewport
   // px), and — while moving — where the stop ripple should land (content px)
-  const trailRef = useRef({ lastMoveAt: 0, wakeAt: 0, x: 0, y: 0, moving: false, pond: "" as PondId, cx: 0, cy: 0 });
+  const trailRef = useRef({ lastMoveAt: 0, wakeAt: 0, fleeAt: 0, x: 0, y: 0, moving: false, pond: "" as PondId, cx: 0, cy: 0 });
   const nextJumpAtRef = useRef(performance.now() + JUMP_MIN_MS + Math.random() * JUMP_SPREAD_MS);
   const rafRef = useRef(0);
   const lastRef = useRef(performance.now());
@@ -519,6 +545,23 @@ export function PondProvider({ children }: { children: ReactNode }) {
       p.bait = { x, y };
       p.lastMoveAt = now;
       const tr = trailRef.current;
+      // cursor velocity: a fast sweep is a threat — big ripple plus an
+      // explosive surge away for every fish within scare range
+      const dtMs = now - tr.lastMoveAt;
+      if (dtMs > 0 && dtMs < 120 && now - tr.fleeAt > CURSOR_FLEE_COOLDOWN_MS) {
+        const speed = (Math.hypot(clientX - tr.x, clientY - tr.y) / dtMs) * 1000;
+        if (speed > CURSOR_FLEE_SPEED) {
+          tr.fleeAt = now;
+          emitRipple(id, x, y, "scare", "big");
+          for (const f of fishRef.current) {
+            if (f.pond !== id || f.catching || f.activity === "flying") continue;
+            const d = Math.hypot(f.x - x, f.y - y);
+            if (d > SCARE_RADIUS || d < 1) continue;
+            f.speed = Math.max(f.speed, f.baseSpeed * FLEE_SURGE);
+            f.heading = f.targetHeading = Math.atan2(f.y - y, f.x - x);
+          }
+        }
+      }
       if (now - tr.lastMoveAt > MOVE_START_MS) {
         // first move after a rest: the big one
         emitRipple(id, x, y, "scare");
@@ -589,6 +632,7 @@ export function PondProvider({ children }: { children: ReactNode }) {
     function tick(now: number) {
       const dt = Math.min(0.05, (now - lastRef.current) / 1000);
       lastRef.current = now;
+      simDt = dt;
 
       const ripples2 = ripplesRef.current;
       while (ripples2.length && now - ripples2[0].t > RIPPLE_LIFE_MS) ripples2.shift();
@@ -1213,6 +1257,31 @@ export function PondProvider({ children }: { children: ReactNode }) {
             const strength = (1 - dist / radius) * (r.size === "small" ? FLEE_STRENGTH_SMALL : FLEE_STRENGTH);
             fx += (dx / dist) * strength;
             fy += (dy / dist) * strength;
+          }
+        }
+
+        // boids: loose schooling with the other wanderers in this pond —
+        // separation keeps them off each other, alignment/cohesion make
+        // them drift as a group rather than ten independent random walks
+        {
+          const neighbours = [];
+          for (const g of fishRef.current) {
+            if (g === f || g.pond !== pond.id || g.catching || g.activity !== "wander") continue;
+            neighbours.push({ pos: { x: g.x, y: g.y }, vel: fromAngle(g.heading, g.speed) });
+          }
+          if (neighbours.length) {
+            const fl = flock({ pos: { x: f.x, y: f.y }, vel: fromAngle(f.heading, f.speed) }, neighbours, {
+              sepRadius: SEP_RADIUS,
+              sightRadius: SIGHT_RADIUS,
+              maxSpeed: f.baseSpeed,
+              maxForce: FLOCK_MAX_FORCE,
+              sep: FLOCK_SEP,
+              align: FLOCK_ALIGN,
+              cohere: FLOCK_COHERE,
+            });
+            // normalise to the same scale as the other steering terms (unit-ish)
+            fx += fl.x / f.baseSpeed;
+            fy += fl.y / f.baseSpeed;
           }
         }
 

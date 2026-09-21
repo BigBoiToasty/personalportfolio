@@ -66,7 +66,9 @@ function FishDom({ fishId, onPopEnd }: { fishId: number; onPopEnd: (id: number) 
         if (el) {
           const deg = (f.heading * 180) / Math.PI;
           el.style.transform = `translate(-50%, -50%) translate(${f.x}px, ${f.y}px) rotate(${deg}deg)`;
-          el.style.setProperty("--beat", f.beat);
+          el.style.setProperty("--rear", "0deg");
+          el.style.setProperty("--tail", "0deg");
+          el.style.setProperty("--fin", "0deg");
         }
       }}
       aria-hidden

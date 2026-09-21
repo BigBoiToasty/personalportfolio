@@ -67,7 +67,7 @@ export interface FishSim {
   wander: number;
   speed: number;
   baseSpeed: number;
-  beat: string; // last tail-beat period written to --beat
+  phase: number; // tail-beat phase (radians), advanced by the sim at a speed-driven rate
   rare: boolean;
   catching: boolean;
   activity: Activity;
